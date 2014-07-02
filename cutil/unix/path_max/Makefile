@@ -4,14 +4,14 @@
 CC 		= gcc
 CFLAGS 	= -g -c -Wall 
 #CFLAGS 	= -g -c -Wall --coverage
-OBJS 	= open_max.o 
+OBJS 	= path_max.o 
 
 #.PHONY
-.PHONY : all open_max clean
+.PHONY : all path_max clean
 
-all : open_max clean
+all : path_max clean
 
-open_max : $(OBJS)
+path_max : $(OBJS)
 	$(CC) -o $@ $^ 
 #	$(CC) -o $@ $^ --coverage
 
