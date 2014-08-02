@@ -121,12 +121,11 @@ class HashMap
 
         $node = $this->buckets[$index];
         $isFirst = TRUE;
-        $pre = $node;
         while ($node !== NULL)
         {
             if ($key === $node->key)
             {
-                if ($pre == $this->buckets[$index])
+                if ($isFirst)
                 {
                     $this->buckets[$index] = $node->nextNode;
                     $this->size -= 1;
@@ -140,6 +139,7 @@ class HashMap
                 }
             }
 
+            $isFirst = FALSE;
             $pre = $node;
             $node = $node->nextNode;
         }
