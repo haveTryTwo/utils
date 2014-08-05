@@ -65,6 +65,8 @@ class HashMap
 
         $this->buckets[$index] = $newNode;
         $this->size += 1;
+
+        return MAP_SUCCESS;
     }
 
     public function insert_or_update($key, $value)
