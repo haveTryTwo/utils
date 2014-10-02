@@ -50,11 +50,13 @@ int get_mypwd()
     if (tmp == NULL)
     {
         printf("getcwd failed! errno:%d, err:%s\n", errno, strerror(errno));
+        free(buf);
         return FILE_FAILED;
     }
 
     printf("%s\n", buf);
 
+    free(buf);
     return ret;
 }
 
