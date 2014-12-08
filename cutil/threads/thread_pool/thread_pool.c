@@ -119,10 +119,11 @@ int thread_pool_destroy(thread_pool *pool)
     }
 
     pool->current_num = 0;
-    pthread_mutex_destroy(&(pool->queue_mutex));
     pool->enable_flags = THREAD_DISENABLE;
 
     pthread_mutex_unlock(&(pool->queue_mutex)); 
+
+    pthread_mutex_destroy(&(pool->queue_mutex));
 
     return THREAD_POOL_OK;
 }
