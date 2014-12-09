@@ -40,14 +40,16 @@ typedef struct thread_pool_unit
 
 typedef struct thread_pool
 {
-    struct thread_pool_unit *running_queue;
-    struct thread_pool_unit *sleeping_queue;
-    pthread_mutex_t queue_mutex;
-    int max_num;
-    int current_num;
-    int running_num;
-    int sleeping_num;
-    int enable_flags;
+    struct thread_pool_unit *running_queue;     // threads in this queue are running
+    struct thread_pool_unit *sleeping_queue;    // threads in this queue are sleeping
+    pthread_mutex_t queue_mutex;    // lock for opreating the queue
+    pthread_cond_t queue_cond;      // condition for destroy
+    int queue_locking_num;          // number of waiting for queue mutex
+    int max_num;                    // the max number of threads in the pool
+    int current_num;                // the number of current threads in the pool
+    int running_num;                // the number of running threads
+    int sleeping_num;               // the number of sleeping threads
+    int enable_flags;               // the flags whether current pool is available
 } thread_pool;
 
 

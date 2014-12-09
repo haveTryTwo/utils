@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "thread_pool.h"
 
-static int move_to_running_queue(thread_pool *pool, thread_pool_unit **unit);
+static int move_to_running_queue(thread_pool *pool, FUNC func, void *arg);
 static int move_to_sleeping_queue(thread_pool *pool, thread_pool_unit *unit);
 static void* init_func(void *p);
 static void cancel_cleanup_mutex(void *p);
+static int fetch_and_add(int *operand, int incr);
 
 int thread_pool_init(thread_pool *pool, int init_num)
 {
@@ -60,6 +62,8 @@ int thread_pool_init(thread_pool *pool, int init_num)
     }
 
     pthread_mutex_init(&(pool->queue_mutex), NULL);
+    pthread_cond_init(&(pool->queue_cond), NULL);
+    pool->queue_locking_num = 0;
 
     pool->max_num = MAX_NUM;
     pool->current_num = total_num;
@@ -83,8 +87,18 @@ int thread_pool_destroy(thread_pool *pool)
     {
         return THREAD_POOL_FAILED;
     }
+    // Set pool enable flags to be false
+    pool->enable_flags = THREAD_DISENABLE;
+
+    // wait for other threads to run over
+    usleep(200000);
 
     pthread_mutex_lock(&(pool->queue_mutex));
+
+    while (pool->queue_locking_num > 0)
+    {
+        pthread_cond_wait(&(pool->queue_cond), &(pool->queue_mutex));
+    }
 
     if (pool->sleeping_num > 0)
     {
@@ -135,64 +149,74 @@ int thread_pool_start_running(thread_pool *pool, FUNC func, void *arg)
         return THREAD_POOL_BAD_ARGS;
     }
 
-    thread_pool_unit *unit = NULL;
     int ret = 0;
 
-    ret = move_to_running_queue(pool, &unit);
+    ret = move_to_running_queue(pool, func, arg);
     if (ret != THREAD_POOL_OK)
     {
         return ret;
     }
 
-    unit->func = func;
-    unit->arg = arg;
-    pthread_mutex_lock(&(unit->mutex));
-    unit->working_status = THREAD_RUNNING;
-    pthread_cond_signal(&(unit->cond));
-    pthread_mutex_unlock(&(unit->mutex));
-
     return THREAD_POOL_OK;
 }
 
-static int move_to_running_queue(thread_pool *pool, thread_pool_unit **unit)
+static int move_to_running_queue(thread_pool *pool, FUNC func, void *arg)
 {
-    if (pool == NULL || unit == NULL)
+    if (pool == NULL)
     {
         return THREAD_POOL_BAD_ARGS;
     }
-    
+
     if (pool->enable_flags == THREAD_DISENABLE)
     {
         return THREAD_POOL_FAILED;
     }
 
     int ret = THREAD_POOL_OK;
+    thread_pool_unit *unit = NULL;
 
+    fetch_and_add(&(pool->queue_locking_num), 1);
     pthread_mutex_lock(&(pool->queue_mutex));
+    if (pool->enable_flags == THREAD_DISENABLE)
+    {
+        fetch_and_add(&(pool->queue_locking_num), -1);
+        pthread_cond_signal(&(pool->queue_cond));
+        pthread_mutex_unlock(&(pool->queue_mutex));
+    }
+    fetch_and_add(&(pool->queue_locking_num), -1);
+
     if (pool->sleeping_num <= 0)
     {
         if (pool->current_num < pool->max_num)
         {
-            *unit = (thread_pool_unit*) malloc(sizeof(thread_pool_unit));
-            if (*unit == NULL)
+            unit = (thread_pool_unit*) malloc(sizeof(thread_pool_unit));
+            if (unit == NULL)
             {
                 pthread_mutex_unlock(&(pool->queue_mutex));
                 return THREAD_POOL_FAILED;
             }
-            (*unit)->func = NULL;
-            (*unit)->arg = NULL;
-            (*unit)->working_status = THREAD_SLEEPING;
-            pthread_mutex_init(&((*unit)->mutex), NULL);
-            pthread_cond_init(&((*unit)->cond), NULL);
-            (*unit)->pool = pool;
-            ret = pthread_create(&((*unit)->th), NULL, init_func, (void*)(*unit));
+            unit->func = NULL;
+            unit->arg = NULL;
+            unit->working_status = THREAD_SLEEPING;
+            pthread_mutex_init(&(unit->mutex), NULL);
+            pthread_cond_init(&(unit->cond), NULL);
+            unit->pool = pool;
+            ret = pthread_create(&(unit->th), NULL, init_func, (void*)unit);
             assert(ret == 0);
-            (*unit)->next = pool->running_queue;
-            pool->running_queue = (*unit);
+            unit->next = pool->running_queue;
+            pool->running_queue = unit;
             pool->running_num++;
             pool->current_num++;
 
+            unit->func = func;
+            unit->arg = arg;
+            pthread_mutex_lock(&(unit->mutex));
+            unit->working_status = THREAD_RUNNING;
+            pthread_cond_signal(&(unit->cond));
+            pthread_mutex_unlock(&(unit->mutex));
+
             pthread_mutex_unlock(&(pool->queue_mutex));
+
             return THREAD_POOL_OK;
         }
 
@@ -200,13 +224,20 @@ static int move_to_running_queue(thread_pool *pool, thread_pool_unit **unit)
         return THREAD_POOL_FULL;
     }
 
-    *unit = pool->sleeping_queue;
-    pool->sleeping_queue = (*unit)->next;
+    unit = pool->sleeping_queue;
+    pool->sleeping_queue = unit->next;
     pool->sleeping_num--;
 
-    (*unit)->next = pool->running_queue;
-    pool->running_queue = (*unit);
+    unit->next = pool->running_queue;
+    pool->running_queue = unit;
     pool->running_num++;
+
+    unit->func = func;
+    unit->arg = arg;
+    pthread_mutex_lock(&(unit->mutex));
+    unit->working_status = THREAD_RUNNING;
+    pthread_cond_signal(&(unit->cond));
+    pthread_mutex_unlock(&(unit->mutex));
 
     pthread_mutex_unlock(&(pool->queue_mutex));
 
@@ -228,8 +259,16 @@ static int move_to_sleeping_queue(thread_pool *pool, thread_pool_unit *unit)
     thread_pool_unit *tmp_unit = NULL;
     int find = FALSE;
 
+    fetch_and_add(&(pool->queue_locking_num), 1);
     pthread_mutex_lock(&(pool->queue_mutex));
-    
+    if (pool->enable_flags == THREAD_DISENABLE)
+    {
+        fetch_and_add(&(pool->queue_locking_num), -1);
+        pthread_cond_signal(&(pool->queue_cond));
+        pthread_mutex_unlock(&(pool->queue_mutex));
+    }
+    fetch_and_add(&(pool->queue_locking_num), -1);
+
     if (pool->running_num <= 0)
     {
         pthread_mutex_unlock(&(pool->queue_mutex));
@@ -311,4 +350,17 @@ static void cancel_cleanup_mutex(void *p)
     pthread_mutex_t *mutex = (pthread_mutex_t*)p;
 
     pthread_mutex_unlock(mutex);
+}
+
+static int fetch_and_add(int *operand, int incr)
+{
+    int result = 0; 
+    asm __volatile__ (
+            "lock xadd %0, %1"
+            : "=r"(result), "=m"(*operand)
+            : "0"(incr)
+            : "memory"
+            );
+
+    return result;
 }
