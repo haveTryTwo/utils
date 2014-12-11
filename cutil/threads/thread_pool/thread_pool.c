@@ -85,7 +85,7 @@ int thread_pool_destroy(thread_pool *pool)
 
     if (pool->enable_flags == THREAD_DISENABLE)
     {
-        return THREAD_POOL_FAILED;
+        return THREAD_POOL_DESTROY;
     }
     // Set pool enable flags to be false
     pool->enable_flags = THREAD_DISENABLE;
@@ -133,7 +133,6 @@ int thread_pool_destroy(thread_pool *pool)
     }
 
     pool->current_num = 0;
-    pool->enable_flags = THREAD_DISENABLE;
 
     pthread_mutex_unlock(&(pool->queue_mutex)); 
 
@@ -169,7 +168,7 @@ static int move_to_running_queue(thread_pool *pool, FUNC func, void *arg)
 
     if (pool->enable_flags == THREAD_DISENABLE)
     {
-        return THREAD_POOL_FAILED;
+        return THREAD_POOL_DESTROY;
     }
 
     int ret = THREAD_POOL_OK;
@@ -182,6 +181,7 @@ static int move_to_running_queue(thread_pool *pool, FUNC func, void *arg)
         fetch_and_add(&(pool->queue_locking_num), -1);
         pthread_cond_signal(&(pool->queue_cond));
         pthread_mutex_unlock(&(pool->queue_mutex));
+        return THREAD_POOL_DESTROY;
     }
     fetch_and_add(&(pool->queue_locking_num), -1);
 
@@ -253,7 +253,7 @@ static int move_to_sleeping_queue(thread_pool *pool, thread_pool_unit *unit)
 
     if (pool->enable_flags == THREAD_DISENABLE)
     {
-        return THREAD_POOL_FAILED;
+        return THREAD_POOL_DESTROY;
     }
 
     thread_pool_unit *tmp_unit = NULL;
@@ -266,6 +266,7 @@ static int move_to_sleeping_queue(thread_pool *pool, thread_pool_unit *unit)
         fetch_and_add(&(pool->queue_locking_num), -1);
         pthread_cond_signal(&(pool->queue_cond));
         pthread_mutex_unlock(&(pool->queue_mutex));
+        return THREAD_POOL_DESTROY;
     }
     fetch_and_add(&(pool->queue_locking_num), -1);
 

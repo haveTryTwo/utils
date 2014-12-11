@@ -6,6 +6,7 @@
 #define THREAD_POOL_BAD_ARGS            1
 #define THREAD_POOL_MUTEX_INIT_FAILED   2
 #define THREAD_POOL_FULL                3
+#define THREAD_POOL_DESTROY             4
 
 #define THREAD_SLEEPING     0 
 #define THREAD_RUNNING      1
