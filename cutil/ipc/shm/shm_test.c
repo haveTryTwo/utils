@@ -9,6 +9,8 @@
 #define MODE    0644
 #define OPEN_MODE   0444
 
+#define SHM_OK      0
+#define SHM_FAILED  -1
 
 int test_creat();
 int test_write();
@@ -19,28 +21,36 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
-        printf("Please input shm type:\n");
-        return -1;
+        goto help;
     }
 
-    if (strcmp(argv[1], "create") == 0)
+    if (strcmp(argv[1], "create") == SHM_OK)
     {
         return test_creat();
     }
-    else if (strcmp(argv[1], "write") == 0)
+    else if (strcmp(argv[1], "write") == SHM_OK)
     {
         return test_write();
     }
-    else if (strcmp(argv[1], "read") == 0)
+    else if (strcmp(argv[1], "read") == SHM_OK)
     {
         return test_read();
     }
-    else if (strcmp(argv[1], "delete") == 0)
+    else if (strcmp(argv[1], "delete") == SHM_OK)
     {
         return test_delete();
     }
 
-    return 0;
+help:
+    printf("Usage: shm COMMAND\n\n"
+           "The most used commands are:\n" 
+           "create      Create a share memory\n"
+           "write       Write something into the share memory\n"
+           "read        Read something from the share memory\n"
+           "delete      Delete the share memory\n"
+            );
+
+    return SHM_FAILED;
 }
 
 int test_creat()
@@ -58,10 +68,10 @@ int test_creat()
         {
             printf("create key:%#x failed! errno:%d, err:%s\n", KEY, errno, strerror(errno));
         }
-        return -1;
+        return SHM_FAILED;
     }
 
-    return 0;
+    return SHM_OK;
 }
 
 int test_write()
@@ -77,14 +87,14 @@ int test_write()
     if (shmid == -1)
     {
         printf("shmget key:%#x failed! errno:%d, err:%s\n", KEY, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
     ptr = shmat(shmid, NULL, 0);
     if (ptr == (void*) -1)
     {
         printf("shmat shmid:%d failed! errno:%d, err:%s\n", shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
     memset(&ds, 0, sizeof(struct shmid_ds));
@@ -92,7 +102,7 @@ int test_write()
     if (ret == -1)
     {
         printf("shmctl shmid:%d failed! errno:%d, err:%s\n", shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
     printf("size of shmid:%d is %zd\n", shmid, ds.shm_segsz);
 
@@ -107,10 +117,10 @@ int test_write()
     if (ret == -1)
     {
         printf("shmdt shmid:%d failed! errno:%d, err:%s\n", shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
-    return 0;
+    return SHM_OK;
 }
 
 int test_read()
@@ -127,7 +137,7 @@ int test_read()
     if (shmid == -1)
     {
         printf("line:%d, shmget key:%#x failed! errno:%d, err:%s\n", __LINE__,  KEY, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
     ptr = shmat(shmid, NULL, SHM_RDONLY);
@@ -135,7 +145,7 @@ int test_read()
     if (ptr == (void*) -1)
     {
         printf("line:%d, shmat shmid:%d failed! errno:%d, err:%s\n", __LINE__, shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
     memset(&ds, 0, sizeof(struct shmid_ds));
@@ -143,7 +153,7 @@ int test_read()
     if (ret == -1)
     {
         printf("line:%d, shmctl shmid:%d failed! errno:%d, err:%s\n", __LINE__, shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
     printf("size of shmid:%d is %zd, ptr:%p\n", shmid, ds.shm_segsz, ptr);
 
@@ -161,10 +171,10 @@ int test_read()
     if (ret == -1)
     {
         printf("shmdt shmid:%d failed! errno:%d, err:%s\n", shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
-    return 0;
+    return SHM_OK;
 }
 
 int test_delete()
@@ -176,15 +186,15 @@ int test_delete()
     if (shmid == -1)
     {
         printf("shmget key:%#x failed! errno:%d, err:%s\n", KEY, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
     ret = shmctl(shmid, IPC_RMID, NULL);
     if (ret == -1)
     {
         printf("shmctl RMID shmid:%d failed! errno:%d, err:%s\n", shmid, errno, strerror(errno));
-        return -1;
+        return SHM_FAILED;
     }
 
-    return 0;
+    return SHM_OK;
 }

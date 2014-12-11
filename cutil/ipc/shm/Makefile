@@ -6,11 +6,11 @@ CFLAGS 	= -g -c -Wall
 OBJS 	= shm_test.o
 
 #.PHONY
-.PHONY : all build clean
+.PHONY : all shm clean
 
-all : build clean
+all : shm clean
 
-build : $(OBJS)
+shm : $(OBJS)
 	$(CC) -o $@ $^ -pthread
 
 clean : 
