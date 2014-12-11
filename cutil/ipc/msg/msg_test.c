@@ -35,8 +35,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        printf("Please input msg operation type\n");
-        return MSG_FAILED;
+        goto help;
     }
 
     if (0 == strcmp(argv[1], "create"))
@@ -55,11 +54,17 @@ int main(int argc, char *argv[])
     {
         test_delete();
     }
-    else
-    {
-        printf("Please input right msg operation type\n");
-        return MSG_FAILED;
-    }
+
+    return MSG_OK;
+
+help:
+    printf("Usage: msg COMMAND\n\n"
+           "The most used commands are:\n" 
+           "create      Create a message queue\n"
+           "send        Send a message to the message queue\n"
+           "recv        Receive a message from the messag queue\n"
+           "delete      Delete the message queue\n"
+            );
 
     return MSG_OK;
 }

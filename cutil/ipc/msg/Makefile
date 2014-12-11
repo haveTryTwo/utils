@@ -8,11 +8,11 @@ GPERF 	= -I/usr/local/gperftools/include -L/usr/local/gperftools/lib -fno-omit-f
 OBJS 	= msg_test.o
 
 #.PHONY
-.PHONY : all build clean
+.PHONY : all msg clean
 
-all : build clean
+all : msg clean
 
-build : $(OBJS)
+msg : $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
 clean : 
