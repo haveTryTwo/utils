@@ -34,8 +34,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        printf("Please input sem operation type\n");
-        return SEM_FAILED;
+        goto help;
     }
 
     if (0 == strcmp(argv[1], "create"))
@@ -54,12 +53,19 @@ int main(int argc, char *argv[])
     {
         sem_delete();
     }
-    else
-    {
-        printf("Please input right sem operation type\n");
-        return SEM_FAILED;
-    }
+
     return 0;
+
+help:
+    printf("Usage: sem COMMAND\n\n"
+           "The most used commands are:\n" 
+           "create      Create a sem lock\n"
+           "lock        Lock the sem to dosomething\n"
+           "unlock      Unlock the sem\n"
+           "delete      Delete the sem\n"
+            );
+
+    return SEM_FAILED;
 }
 
 int sem_create()
