@@ -28,9 +28,12 @@ void abort()
     // If we're here, it means process has caught SIGABRT and 
     // calls signal handler
     fflush(NULL);
+    act.sa_handler = SIG_DFL;
     sigaction(SIGABRT, &act, NULL);
     sigprocmask(SIG_SETMASK, &sig_mask, NULL);
     raise(SIGABRT);
+
+    // Here should never be executed..
     exit(-1);
 }
 
