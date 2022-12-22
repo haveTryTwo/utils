@@ -1,21 +1,50 @@
 #!/bin/sh
 
-C_SUFFIX="\.c$|\.h$"
+if [[ $# != 2 ]]; then
+    echo "Please input language type and directory!"
+    echo " cmd: count_source_file_lines.sh [java/cpp/shell/php/go] directory "
+    exit -1
+fi
+
 CPP_SUFFIX="\.c$|\.cpp$|\.h$|\.cc$"
+JAVA_SUFFIX="\.java$"
 SHELL_SUFFIX="\.sh$"
 PHP_SUFFIX="\.php$"
-JAVA_SUFFIX="\.java$"
+GO_SUFFIX="\.go$"
+
 
 function count_sources_files_lines()
 {
-    if [ $# -lt 1 ]; then
+    if [[ $# -lt 1 ]]; then
         echo "Please input files"
         exit -1
     fi
 
-    source_path=$1
+    language=$1
+    source_path=$2
+    case $language in 
+        "java")
+            SUFFIX=$JAVA_SUFFIX
+            ;;
+        "cpp")
+            SUFFIX=$CPP_SUFFIX
+            ;;
+        "shell")
+            SUFFIX=$SHELL_SUFFIX
+            ;;
+        "php")
+            SUFFIX=$PHP_SUFFIX
+            ;;
+        "go")
+            SUFFIX=$GO_SUFFIX
+            ;;
+        *)
+            echo "please input right language"
+            exit -1
+            ;;
+    esac
 
-    files=`find $source_path -name "*" | grep -E "$JAVA_SUFFIX"`
+    files=$(find $source_path -name "*" | grep -E "$SUFFIX")
     for file in $files;
     do
         lines=$(cat $file | wc -l)
@@ -26,4 +55,4 @@ function count_sources_files_lines()
     echo "sum: $sum"
 }
 
-count_sources_files_lines $1
+count_sources_files_lines $1 $2
