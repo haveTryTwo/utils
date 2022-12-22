@@ -1,6 +1,10 @@
 #!/bin/sh
 
-SUFFIX="\.c$|\.cpp$|\.h$|\.sh$|\.cc$|\.php$"
+C_SUFFIX="\.c$|\.h$"
+CPP_SUFFIX="\.c$|\.cpp$|\.h$|\.cc$"
+SHELL_SUFFIX="\.sh$"
+PHP_SUFFIX="\.php$"
+JAVA_SUFFIX="\.java$"
 
 function count_sources_files_lines()
 {
@@ -11,12 +15,12 @@ function count_sources_files_lines()
 
     source_path=$1
 
-    files=`find $source_path -name "*" | grep -E "$SUFFIX"`
+    files=`find $source_path -name "*" | grep -E "$JAVA_SUFFIX"`
     for file in $files;
     do
-        lines=`cat $file | wc -l`
+        lines=$(cat $file | wc -l)
         echo "$file: $lines lines"
-        sum=`expr $sum + $lines`
+        (( sum = sum + $lines ))
     done
 
     echo "sum: $sum"
